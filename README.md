@@ -1,23 +1,21 @@
 # PDF Combine Utility 
 # 
 # Introduction 
-
+The Utility developed for convert TLF's files into *.pdf and combine then according to meta-data file. 
 ![Test Image 3](start.jpg)
 
 # Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+ 
+1.	Download and run main.py
+2.	Select target folder with all TLS's files stored. 
+3.	Select metadta file. 
+4.	Review and fix toc.txt files (if any issues). 
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+
 
 # Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+TODO: 
+1. Implemant "Final Run" check-dox logic: if False value - ignore errors origin from metadata files "*** fiels not found" - just add blank the page 
+    to final pdf files with place holder like "ORIGINAL FIELS WAS NOT PROVIDED"
+2. Add to usage OpenOfiice as convert tool. 
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
