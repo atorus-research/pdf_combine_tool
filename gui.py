@@ -46,12 +46,12 @@ class GUICore:
         img2 = PhotoImage(file=resource_path(os.path.join('.img', 'pdf_utility_logo.png'))).subsample(2, 2)
         banner2 = Label(self.root, image=img2)
         banner2.image = img2
-        banner2.place(x=225, y=16)
+        banner2.place(x=190, y=12)
         # Insert Python logo.
         img3 = PhotoImage(file=resource_path(os.path.join('.img', 'python_logo.png'))).subsample(2, 2)
         banner3 = Label(self.root, image=img3)
         banner3.image = img3
-        banner3.place(x=445, y=5)
+        banner3.place(x=405, y=12)
 
 
         # Labels.
