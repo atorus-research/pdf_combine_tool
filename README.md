@@ -1,4 +1,5 @@
-#                                                   PDF Combine Utility 
+# PDF Combine Utility 
+# 
 # Introduction 
 
 ![Test Image 3](start.jpg)
