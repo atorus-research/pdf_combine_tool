@@ -44,9 +44,9 @@ class PDFUtility:
 
         """
         self.gui.entry_var1.set(os.path.normpath(askdirectory()))
-        self.assign_CWD()
+        self.assign_cwd()
 
-    def assign_CWD(self):
+    def assign_cwd(self):
         """
         Function for assign selected current working folder path to value
 
@@ -81,6 +81,7 @@ class PDFUtility:
             self.gui.logger.warning('INFO: Directory ' + str(dirname) + ' was created')
         except:
             self.gui.logger.warning('INFO: Directory ' + str(dirname) + ' already exists')
+            pass
 
     # Browse the path to TLF metadata.
     def select_metadata(self):
@@ -214,19 +215,19 @@ class PDFUtility:
                     result = messagebox.askquestion(title="Word process running",
                                                     message='All Word related processes should be closed before run.' + \
                                                             "\nClose all Word processes?")
-                # result = ''
 
                 if result or silent:
                     proc.kill()
 
     # TODO: TO_THINK: run  with multithreads, parallelization?
     def rtf_file_to_pdf(self, file_name: str, input_dir: str, output_dir: str, pause_time: float) -> None:
-        # word = None  # declare variable 'word'.
+        word = None  # declare variable 'word'.
         wdFormatPDF = 17
         wdDoNotSaveChanges = 0
 
         # try:
         word = win32com.client.gencache.EnsureDispatch('Word.Application')
+
 
         in_file = os.path.normpath(os.path.join(input_dir, file_name))
         output_file = os.path.splitext(file_name)[0]
@@ -237,21 +238,35 @@ class PDFUtility:
             self.gui.logger.warning(str(file_name) + ' has been detected and do not need to convert to PDF.')
 
         else:
-            try:
-                doc = word.Documents.Open(in_file, False, False, True)  # 'True' as a 3d param tell to open in ReadOnly.
-                doc.SaveAs(out_file, FileFormat=wdFormatPDF)
-                doc.Close(SaveChanges=wdDoNotSaveChanges)
-                time.sleep(pause_time)
-                self.gui.logger.warning(str(file_name) + ' has been converted to PDF.')
-                # out_file.close()
-            except Exception as e:
-                print(e)
-                self.gui.logger.error('ERROR: Error handle while converting ' + str(file_name) + ' file.')
-                messagebox.showerror(title='File convert error',
-                                     message='ERROR: Error handle while converting ' + str(file_name) +
-                                                                          '. Check metadata file and '
-                                                                          'TLF  file.', default='ok')
-                os.abort()
+            if self.gui.final_run_var.get() == 1: #Raise Error and abort - Final run mood, no file
+                try:
+                    doc = word.Documents.Open(in_file, False, False, True)  # 'True' as a 3d param tell to open in ReadOnly.
+                    doc.SaveAs(out_file, FileFormat=wdFormatPDF)
+                    doc.Close(SaveChanges=wdDoNotSaveChanges)
+                    time.sleep(pause_time)
+                    self.gui.logger.warning(str(file_name) + ' has been converted to PDF.')
+                    # out_file.close()
+                except Exception as e:
+                    print(e)
+                    self.gui.logger.error('ERROR: Error handle while converting ' + str(file_name) + ' file.')
+                    messagebox.showerror(title='File convert error',
+                                         message='ERROR: Error handle while converting ' + str(file_name) +
+                                                                              '. Check metadata file and '
+                                                                              'TLF  file.', default='ok')
+                    os.abort()
+            else:
+                try:
+                    doc = word.Documents.Open(in_file, False, False, True)  # 'True' as a 3d param tell to open in ReadOnly.
+                    doc.SaveAs(out_file, FileFormat=wdFormatPDF)
+                    doc.Close(SaveChanges=wdDoNotSaveChanges)
+                    time.sleep(pause_time)
+                    self.gui.logger.warning(str(file_name) + ' has been converted to PDF.')
+
+                except Exception as e:
+                    self.gui.logger.error("Sorry, we couldn't find your file. Was it moved, renamed or deleted? "
+                                          + str(file_name) + ' file.')
+                    pass
+
 
     def convert_to_pdf(self, in_list: list, rtf_folder_dir: str, pdf_folder_dir: str) -> None:
         """
@@ -278,7 +293,18 @@ class PDFUtility:
         print(_tm)
 
         if _tm:
-            while len(_tm) != 0:
+            if self.gui.final_run_var.get() == 1:
+                while len(_tm) != 0:
+                    for file in _tm:
+                        self.rtf_file_to_pdf(file_name=file, input_dir=rtf_folder_dir,
+                                             output_dir=pdf_folder_dir, pause_time=0.5)
+                        in_folder_pdf = tuple(os.path.join(elem)[:-4] + '.rtf' for elem in os.listdir(pdf_folder_dir) if
+                                              pathlib.Path(elem).suffix == '.pdf')
+                        s = set(in_folder_pdf)
+                        _tm = tuple(x for x in in_list if x not in s)
+                        print("NEED TO CONVERT:")
+                        print(_tm)
+            else:
                 for file in _tm:
                     self.rtf_file_to_pdf(file_name=file, input_dir=rtf_folder_dir,
                                          output_dir=pdf_folder_dir, pause_time=0.5)
@@ -305,30 +331,65 @@ class PDFUtility:
         else:
             df['Bookmark'] = df['Title3'] + str(title_sep) + df['Title4']
 
-
-
-
-
-
-
         file_bmk_dict = dict(zip(df.FilenamePDF, df.Bookmark))
         print('BOOKmarks dict')
         print(file_bmk_dict)
 
         for file, bmk_txt in file_bmk_dict.items():
-            print("ADD BOOKMARKS TO PDF FILES: ")
-            print(file)
-            self.gui.logger.warning("Add bookmark to file " + str(file))
-            print("Bookmark text to add: ")
-            print(bmk_txt)
-            self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
-            with fitz.open(file) as _tmpfile:
-                _tmpfile.set_toc([[1, bmk_txt, 1]])
-                _tmpfile.name = file
-                print(_tmpfile.can_save_incrementally())
-                _tmpfile.saveIncr()
+            print("FINAL RUN MOOD: ", self.gui.final_run_var.get())
+            if self.gui.final_run_var.get(): #Final run - all files exists according to metadata file
+                print("ADD BOOKMARKS TO PDF FILES: ")
+                print(file)
+                self.gui.logger.warning("Add bookmark to file " + str(file))
+                print("Bookmark text to add: ")
+                print(bmk_txt)
+                self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
+                with fitz.open(file) as _tmpfile:
+                    _tmpfile.set_toc([[1, bmk_txt, 1]])
+                    _tmpfile.name = file
+                    print(_tmpfile.can_save_incrementally())
+                    _tmpfile.saveIncr()
 
-    def go_combine_selected_pdf(self, dir, meta_data_, out_name, title_sep: str, add_popul: bool = True, prot_fl=False,):
+            else: #temp run - not all files from metadata are into tfl's folder
+                print("FILE EXISTS: ",str(os.path.basename(file)),  os.path.exists(file))
+                if os.path.exists(file): #file exists - need to add bookmark
+                    print("ADD BOOKMARKS TO PDF FILES: ")
+                    print(file)
+                    self.gui.logger.warning("Add bookmark to file " + str(file))
+                    print("Bookmark text to add: ")
+                    print(bmk_txt)
+                    self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
+                    with fitz.open(file) as _tmpfile:
+                        _tmpfile.set_toc([[1, bmk_txt, 1]])
+                        _tmpfile.name = file
+                        print(_tmpfile.can_save_incrementally())
+                        _tmpfile.saveIncr()
+
+                else: #file not exist - need to create it and add bookmark
+                    self.gui.logger.warning("Create file: " + str(file))
+                    print("Create file-holder for: " + str(os.path.basename(file)))
+                    print("ADD BOOKMARKS TO PDF FILES_: ", str(os.path.basename(file)))
+
+                    print("Bookmark text to add_: ")
+                    bmk_txt = str(os.path.basename(file))[:-4] + " _NO SUCH FILE IN TLF's FOLDER_"
+                    self.gui.logger.warning("Bookmark to add_: " + str(bmk_txt))
+
+                    doc = fitz.open()
+                    page = doc.newPage()
+                    where = fitz.Point(50, 100)
+                    page.insertText(where, """NO SUCH FILE IN TLF's FOLDER""", fontsize=35)
+                    doc.save(file)
+
+                    with fitz.open(file) as _tmpfile:
+                        _tmpfile.set_toc([[1, bmk_txt, 1]])
+                        _tmpfile.name = file
+                        print(_tmpfile.can_save_incrementally())
+                        _tmpfile.saveIncr()
+
+
+
+    def go_combine_selected_pdf(self, dir, meta_data_, out_name, title_sep: str, add_popul: bool = True,
+                                prot_fl: bool =False):
 
         def fitz_combine(pdf_files, out_name_, prot_fl_=False):
             with fitz.open() as result:
@@ -375,22 +436,14 @@ class PDFUtility:
         tmp_file_bookmark_dict = dict(zip(df['Filename'], df['Bookmark']))
         tmp_file_order_dict = {k: v[:-3] + 'pdf' for k, v in tmp_file_order_dict.items()}
         tmp_file_bookmark_dict = {k[:-3] + 'pdf': v for k, v in tmp_file_bookmark_dict.items()}
-        # print("File bmk dict")
-        # print(tmp_file_bookmark_dict)
 
         order_dict = dict(sorted(tmp_file_order_dict.items()))
         pdf_files_ = tuple(os.path.join(dir, v) for k, v in dict(sorted(order_dict.items())).items())
 
-        # print("Order dict: ")
-        # print(len(order_dict))
-        # print(order_dict)
         FILE_CONST = 400
         if len(pdf_files_) <= FILE_CONST:
             fitz_combine(pdf_files=pdf_files_, out_name_=out_name, prot_fl_=prot_fl)
         else:
-            # print(f"MORE THAN {FILE_CONST} FILES")
-
-
             a_ = math.ceil(int(len(pdf_files_))/FILE_CONST)
             # print("A_", a_)
             a_view = order_dict.items()
@@ -406,27 +459,17 @@ class PDFUtility:
                 end += FILE_CONST
                 # print(dct_lst)
 
-            # for elem in dct_lst:
-            #     print(elem)
-            #     exec("""print({0})""".format(elem))
-
             for elem in dct_lst:
 
                 dict_1 = dict()
                 exec("""for num, f_name in {0}:
                     dict_1.setdefault(num, []).append(f_name)""".format(elem))
-                # print("DICT1:")
-                # print(dict_1)
                 for key, value in dict_1.items():
-                    # do something with value
                     dict_1[key] = value[0]
-                # print("FILES TO MERGE: ")
-                # print(dict_1)
+
 
 
                 pdf_files_ = tuple(os.path.join(dir, v) for k, v in dict(sorted(dict_1.items())).items())
-                # print("PDF FILES_: ")
-                # print(pdf_files_)
                 fitz_combine(pdf_files=pdf_files_, out_name_=elem+".pdf", prot_fl_=prot_fl)
 
             dct_lst = [elem+'.pdf' for elem in dct_lst]

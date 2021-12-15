@@ -119,11 +119,12 @@ class GUICore:
         self.pass_check = Checkbutton(self.root, text='Set password', variable=self.pas_check_var, onvalue=1,
                                       offvalue=0, font=('Ubuntu, 9'), justify='left')
         self.pass_check.place(x=370, y=195)
+
         #TODO: add def to use Final_run - if 0 then ignore errors while links metadat and tlf-files
         self.final_run_var = BooleanVar()
         self.final_run_var.set(0)
         self.final_run = Checkbutton(self.root, text='Final run', variable=self.final_run_var, onvalue=1,
-                                      offvalue=0, font=('Ubuntu, 9'), justify='left', state=DISABLED)
+                                      offvalue=0, font=('Ubuntu, 9'), justify='left')
         self.final_run.place(x=370, y=145)
 
         # Combobox for select font
