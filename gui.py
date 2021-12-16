@@ -115,6 +115,7 @@ class GUICore:
         self.btn2 = Button(self.root, text='Browse', font=('Ubuntu, 9'), width=11)
         self.btn2.place(x=580, y=85)
 
+        # Password set and store
         self.entry_var5 = StringVar()
         def set_pass():
             if self.pas_check_var:
@@ -134,16 +135,6 @@ class GUICore:
                                       offvalue=0, font=('Ubuntu, 9'), justify='left', command=set_pass)
         self.pass_check.place(x=370, y=180)
 
-
-
-
-
-
-
-
-
-
-        #TODO: add def to use Final_run - if 0 then ignore errors while links metadat and tlf-files
         self.final_run_var = BooleanVar()
         self.final_run_var.set(0)
         self.final_run = Checkbutton(self.root, text='Final run', variable=self.final_run_var, onvalue=1,

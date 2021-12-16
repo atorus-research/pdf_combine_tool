@@ -114,11 +114,9 @@ class PDFUtility:
         else:
             self.gui.logger.warning('WARNING: Metadata file not selected')
             messagebox.showwarning(title="Warning", message="Please select metatada file")
-        # Create PY dict with output ID as a KEY and a tuple of (output title, population and output title 2)
-        # as the VALUE.
-        # self.meta_source = self.meta_data_to_dict(METADATA, title_sep= self.gui.title_separator(), add_popul = self.gui.add_population )
-
         self.meta_source = self.meta_data_to_dict(METADATA, title_sep="*", add_popul=False)
+
+
     @staticmethod
     def get_event_number(path_to_metadata: str):
         """
@@ -225,9 +223,7 @@ class PDFUtility:
         wdFormatPDF = 17
         wdDoNotSaveChanges = 0
 
-        # try:
         word = win32com.client.gencache.EnsureDispatch('Word.Application')
-
 
         in_file = os.path.normpath(os.path.join(input_dir, file_name))
         output_file = os.path.splitext(file_name)[0]
@@ -280,17 +276,10 @@ class PDFUtility:
         # ask user to close all word processes for avoid freeze during convertation
         self.close_word_proc()
         #check if all files from pdf_to_keep present into folder -> convert while not true
-        print("COUNT OF PDF: ")
-        print(in_list)
         in_folder_pdf = tuple(os.path.join(elem)[:-4]+'.rtf' for elem in os.listdir(pdf_folder_dir) if
                        pathlib.Path(elem).suffix == '.pdf')
-
-        print("PDF IN FOLDER: ")
-        print(in_folder_pdf)
         s = set(in_folder_pdf)
         _tm = tuple(x for x in in_list if x not in s)
-        print("NEED TO CONVERT:")
-        print(_tm)
 
         if _tm:
             if self.gui.final_run_var.get() == 1:
@@ -302,8 +291,6 @@ class PDFUtility:
                                               pathlib.Path(elem).suffix == '.pdf')
                         s = set(in_folder_pdf)
                         _tm = tuple(x for x in in_list if x not in s)
-                        print("NEED TO CONVERT:")
-                        print(_tm)
             else:
                 for file in _tm:
                     self.rtf_file_to_pdf(file_name=file, input_dir=rtf_folder_dir,
@@ -312,8 +299,6 @@ class PDFUtility:
                                           pathlib.Path(elem).suffix == '.pdf')
                     s = set(in_folder_pdf)
                     _tm = tuple(x for x in in_list if x not in s)
-                    print("NEED TO CONVERT:")
-                    print(_tm)
         else:
             # Reset Progress Bar
             self.gui.pb1['value'] = 0
@@ -332,17 +317,11 @@ class PDFUtility:
             df['Bookmark'] = df['Title3'] + str(title_sep) + df['Title4']
 
         file_bmk_dict = dict(zip(df.FilenamePDF, df.Bookmark))
-        print('BOOKmarks dict')
-        print(file_bmk_dict)
 
         for file, bmk_txt in file_bmk_dict.items():
             print("FINAL RUN MOOD: ", self.gui.final_run_var.get())
             if self.gui.final_run_var.get(): #Final run - all files exists according to metadata file
-                print("ADD BOOKMARKS TO PDF FILES: ")
-                print(file)
                 self.gui.logger.warning("Add bookmark to file " + str(file))
-                print("Bookmark text to add: ")
-                print(bmk_txt)
                 self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
                 with fitz.open(file) as _tmpfile:
                     _tmpfile.set_toc([[1, bmk_txt, 1]])
@@ -351,14 +330,8 @@ class PDFUtility:
                     _tmpfile.saveIncr()
 
             else: #temp run - not all files from metadata are into tfl's folder
-                print("FILE EXISTS: ",str(os.path.basename(file)),  os.path.exists(file))
                 if os.path.exists(file): #file exists - need to add bookmark
-                    print("ADD BOOKMARKS TO PDF FILES: ")
-                    print(file)
                     self.gui.logger.warning("Add bookmark to file " + str(file))
-                    print("Bookmark text to add: ")
-                    print(bmk_txt)
-                    # bmk_txt = str(os.path.basename(file))[:-4] + " _NO SUCH FILE IN TLF's FOLDER_"
                     self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
                     with fitz.open(file) as _tmpfile:
                         _tmpfile.set_toc([[1, bmk_txt, 1]])
@@ -368,10 +341,6 @@ class PDFUtility:
 
                 else: #file not exist - need to create it and add bookmark
                     self.gui.logger.warning("Create file: " + str(file))
-                    print("Create file-holder for: " + str(os.path.basename(file)))
-                    print("ADD BOOKMARKS TO PDF FILES_: ", str(os.path.basename(file)))
-
-                    print("Bookmark text to add_: ")
                     bmk_txt = str(os.path.basename(file))[:-4] + "NO SUCH FILE IN TLF's FOLDER->Re-RUN to get bookmark"
                     self.gui.logger.warning("Bookmark to add_: " + str(bmk_txt))
 
@@ -410,10 +379,6 @@ class PDFUtility:
 
                 # general_toc.sort()
                 general_toc = list(k for k, _ in itertools.groupby(general_toc))
-                print('GENERAL TOC COMBINE: ')
-                print(general_toc)
-                print(type(general_toc))
-
                 result.set_toc(general_toc)
                 if prot_fl_:
                     result.save(out_name_, pretty=True, garbage=4, deflate=True, encryption=4, user_pw="ewq321")
@@ -446,22 +411,19 @@ class PDFUtility:
             fitz_combine(pdf_files=pdf_files_, out_name_=out_name, prot_fl_=prot_fl)
         else:
             a_ = math.ceil(int(len(pdf_files_))/FILE_CONST)
-            # print("A_", a_)
             a_view = order_dict.items()
             a_list = list(a_view)
             st = 0
             end = FILE_CONST
             dct_lst = []
-            # print("DCT_LST: ", dct_lst)
             for i in range(0, a_):
                 dct_lst.append(f'a_{i}')
                 exec("a_{} = a_list[st:end]".format(i))
                 st = end
                 end += FILE_CONST
-                # print(dct_lst)
+
 
             for elem in dct_lst:
-
                 dict_1 = dict()
                 exec("""for num, f_name in {0}:
                     dict_1.setdefault(num, []).append(f_name)""".format(elem))
@@ -474,7 +436,6 @@ class PDFUtility:
                 fitz_combine(pdf_files=pdf_files_, out_name_=elem+".pdf", prot_fl_=prot_fl)
 
             dct_lst = [elem+'.pdf' for elem in dct_lst]
-            # print(dct_lst)
             fitz_combine(pdf_files=dct_lst, out_name_=out_name, prot_fl_=prot_fl)
             for elem in dct_lst:
                 try:

@@ -275,7 +275,7 @@ class PDFCompiler:
 
         col_header = ['name', 'page']
         PR_TO_IN = 1 / 72
-        pdf_del = False
+        pdf_del = False #flag for remove _PDF folder
         # set page width as length of string: int ->  number of symbols
         # default value
         page_w = 152
@@ -415,15 +415,10 @@ class PDFCompiler:
 
         if self.gui.pas_check_var.get() == 1:
             print('############################################################################')
-            print(self.gui.pas_check_var.get())
+            print("Set password: "self.gui.pas_check_var.get())
             print(self.gui.entry_var5.get())
             print('############################################################################')
             tlfs, tlfs_count = self.util.get_tlf_list(METADATA)
-            print('++++++++++++ First file ++++++++++++')
-            print('=========== Last file ===========')
-            print(tlfs[0])
-            print(tlfs[-1])
-            print("=========== Last file ===========")
 
             result.save(self.outFilePdfToc, pretty=True, garbage=4, deflate=True,
                         encryption=fitz.PDF_ENCRYPT_AES_256,
@@ -449,50 +444,37 @@ class PDFCompiler:
         _ = str(usage_font_c) + '.pkl'
         os.remove(_)
 
-
-# TODO: Check fiels in use that broken removing _PDF folder
-        # pdf_del = messagebox.askokcancel(title='Remove PDF', message="Delete converted pdf files?",
-        #                                  default='ok')
-
-
-
-        if pdf_del == True:
-            print(self.pathToPDF)
-            rem_msg = ''
-            file_lst_to_rem = os.listdir(self.pathToPDF)
-            print(file_lst_to_rem)
-            for elem in file_lst_to_rem:
-                pdf_file_to_read = os.path.join(self.pathToPDF, elem)
-                print(pdf_file_to_read)
-                try:
-                    os.rename(pdf_file_to_read, pdf_file_to_read)
-                except Exception as e:  # [WinError 32]
-                    print(e)
-                    rem_msg = "Can not remove _PDF folder because file " + (
-                        elem) + " it is being used by another process"
-                    print(rem_msg)
-            for elem_ in file_lst_to_rem:
-                pdf_file_to_read = os.path.join(self.pathToPDF, elem_)
-                print(pdf_file_to_read)
-                try:
-                    with open(pdf_file_to_read, 'rb') as f:
-                        pass
-                except Exception as e:  # [WinError 32]
-                    print(e)
-                    rem_msg = "Can not close _PDF folder because file " + (
-                        elem_) + " it is being used by another process"
-
-            if rem_msg == '':
-                shutil.rmtree(self.pathToPDF)
-            else:
-                messagebox.showinfo(title="Unable remove _PDF", message=rem_msg)
+        # if pdf_del == True:
+        #     print(self.pathToPDF)
+        #     rem_msg = ''
+        #     file_lst_to_rem = os.listdir(self.pathToPDF)
+        #     for elem in file_lst_to_rem:
+        #         pdf_file_to_read = os.path.join(self.pathToPDF, elem)
+        #         try:
+        #             os.rename(pdf_file_to_read, pdf_file_to_read)
+        #         except Exception as e:  # [WinError 32]
+        #             rem_msg = "Can not remove _PDF folder because file " + (
+        #                 elem) + " it is being used by another process"
+        #             print(rem_msg)
+        #     for elem_ in file_lst_to_rem:
+        #         pdf_file_to_read = os.path.join(self.pathToPDF, elem_)
+        #         try:
+        #             with open(pdf_file_to_read, 'rb') as f:
+        #                 pass
+        #         except Exception as e:  # [WinError 32]
+        #             rem_msg = "Can not close _PDF folder because file " + (
+        #                 elem_) + " it is being used by another process"
+        #
+        #     if rem_msg == '':
+        #         shutil.rmtree(self.pathToPDF)
+        #     else:
+        #         messagebox.showinfo(title="Unable remove _PDF", message=rem_msg)
 
         q = messagebox.askokcancel(title=None, message="Combined pdf ready and save at " + str(self.outFilePdfToc) +
                                                        ". Do you want to open the file?",
                                    default='ok')
         if q == True:
             os.startfile(self.outFilePdfToc)
-
 
         # Make 'GO' button active again.
         self.gui.btn_go.config(state='normal')
