@@ -414,6 +414,10 @@ class PDFCompiler:
         result.set_toc(general_toc)
 
         if self.gui.pas_check_var.get() == 1:
+            print('############################################################################')
+            print(self.gui.pas_check_var.get())
+            print(self.gui.entry_var5.get())
+            print('############################################################################')
             tlfs, tlfs_count = self.util.get_tlf_list(METADATA)
             print('++++++++++++ First file ++++++++++++')
             print('=========== Last file ===========')
@@ -423,7 +427,7 @@ class PDFCompiler:
 
             result.save(self.outFilePdfToc, pretty=True, garbage=4, deflate=True,
                         encryption=fitz.PDF_ENCRYPT_AES_256,
-                        user_pw=tlfs[0], owner_pw=tlfs[-1])
+                        user_pw=tlfs[0], owner_pw=self.gui.entry_var5.get())
         if self.gui.pas_check_var.get() == 0:
             result.save(self.outFilePdfToc, pretty=True, garbage=4, deflate=True)
 

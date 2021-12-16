@@ -1,6 +1,7 @@
 import logging
 import os
 from tkinter import *
+import tkinter as tk
 from tkinter import scrolledtext
 from tkinter.ttk import Progressbar
 from tkinter.ttk import Combobox
@@ -114,11 +115,33 @@ class GUICore:
         self.btn2 = Button(self.root, text='Browse', font=('Ubuntu, 9'), width=11)
         self.btn2.place(x=580, y=85)
 
+        self.entry_var5 = StringVar()
+        def set_pass():
+            if self.pas_check_var:
+                self.lbl6 = Label(self.root, text='Password:', font='Ubuntu, 10')
+                self.lbl6.place(x=370, y=210)
+                # For password entry and display.
+
+                self.entr5 = Entry(self.root, textvariable=self.entry_var5, show='*')
+                self.entr5.config(state='normal')
+                self.entr5.place(x=450, y=210, width=210, height=25)
+            else:
+                pass
+
         self.pas_check_var = BooleanVar()
         self.pas_check_var.set(0)
         self.pass_check = Checkbutton(self.root, text='Set password', variable=self.pas_check_var, onvalue=1,
-                                      offvalue=0, font=('Ubuntu, 9'), justify='left')
-        self.pass_check.place(x=370, y=195)
+                                      offvalue=0, font=('Ubuntu, 9'), justify='left', command=set_pass)
+        self.pass_check.place(x=370, y=180)
+
+
+
+
+
+
+
+
+
 
         #TODO: add def to use Final_run - if 0 then ignore errors while links metadat and tlf-files
         self.final_run_var = BooleanVar()
@@ -169,6 +192,8 @@ class GUICore:
         # GO button.
         self.btn_go = Button(self.root, text='GO!', font=('Ubuntu, 10'))
         self.btn_go.place(x=580, y=115, width=88)
+
+
     @property
     def add_population(self):
         """

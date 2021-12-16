@@ -358,6 +358,7 @@ class PDFUtility:
                     self.gui.logger.warning("Add bookmark to file " + str(file))
                     print("Bookmark text to add: ")
                     print(bmk_txt)
+                    # bmk_txt = str(os.path.basename(file))[:-4] + " _NO SUCH FILE IN TLF's FOLDER_"
                     self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
                     with fitz.open(file) as _tmpfile:
                         _tmpfile.set_toc([[1, bmk_txt, 1]])
@@ -371,7 +372,7 @@ class PDFUtility:
                     print("ADD BOOKMARKS TO PDF FILES_: ", str(os.path.basename(file)))
 
                     print("Bookmark text to add_: ")
-                    bmk_txt = str(os.path.basename(file))[:-4] + " _NO SUCH FILE IN TLF's FOLDER_"
+                    bmk_txt = str(os.path.basename(file))[:-4] + "NO SUCH FILE IN TLF's FOLDER->Re-RUN to get bookmark"
                     self.gui.logger.warning("Bookmark to add_: " + str(bmk_txt))
 
                     doc = fitz.open()
