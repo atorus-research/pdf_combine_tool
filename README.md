@@ -15,7 +15,12 @@ The Utility developed for convert TLF's files into *.pdf and combine then accord
 
 # Contribute
 TODO: 
+
+1. Add to usage OpenOfiice as convert tool.
+
+
+
+DONE: 
 1. Implemant "Final Run" check-dox logic: if False value - ignore errors origin from metadata files "*** fiels not found" - just add blank the page 
     to final pdf files with place holder like "ORIGINAL FIELS WAS NOT PROVIDED"
-2. Add to usage OpenOfiice as convert tool. 
 
