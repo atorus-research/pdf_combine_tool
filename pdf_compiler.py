@@ -415,7 +415,7 @@ class PDFCompiler:
 
         if self.gui.pas_check_var.get() == 1:
             print('############################################################################')
-            print("Set password: "self.gui.pas_check_var.get())
+            print("Set password: ", self.gui.pas_check_var.get())
             print(self.gui.entry_var5.get())
             print('############################################################################')
             tlfs, tlfs_count = self.util.get_tlf_list(METADATA)
