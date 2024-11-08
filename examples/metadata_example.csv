@@ -1,0 +1,14 @@
+TLF,Title3,Title4,Title5,ProgName,Seq,OutputName,Order
+F,Figure 14.1-5.3,Spaghetti Plot of Dose Conversion Factor Over Time,Safety Population,g_120_dose,1,F_14.1-5.3,1
+F,Figure 14.2.3-1.3.2,Plot of Blood Thyroid Hormone Concentrations Over Time by Subject,Completer Population,g_120_thdc,2,F_14.2.3-1.3.2,2
+F,Figure 14.2.3-1.4.1,Spaghetti Plot of Free Thyroxine (fT4) Concentrations Over Time,Safety Population,g_120_spagth,1,F_14.2.3-1.4.1,3
+F,Figure 14.2.3-1.4.2,Spaghetti Plot of Free Thyroxine (fT4) Concentrations Over Time,Completer Population,g_120_spagth,2,F_14.2.3-1.4.2,4
+F,Figure 14.2.3-1.5.1,Spaghetti Plot of Thyroid Stimulating Hormone (TSH) Concentrations Over Time,Safety Population,g_120_spagth,3,F_14.2.3-1.5.1,5
+F,Figure 14.2.3-1.5.2,Spaghetti Plot of Thyroid Stimulating Hormone (TSH) Concentrations Over Time,Completer Population,g_120_spagth,4,F_14.2.3-1.5.2,6
+F,Figure 14.2.3-1.6.4,Mean Change from Baseline of Blood Thyroid Hormone Concentrations Over Time in Maintenance Period,Completer Population,g_120_chgthmain,2,F_14.2.3-1.6.4,7
+F,Figure 14.2.3-2.2,Mean Treatment Satisfaction Questionnaire for Medication (TSQM-9) Results by Domain and Treatment,Safety Population,g_120_tsqm,1,F_14.2.3-2.2,8
+F,Figure 14.2.3-4.7,Triiodothyronine (T3) Concentration in 168-hr Period over Time by Subject,Pharmacokinetic Population,g_120_subjpc,2,F_14.2.3-4.7,9
+F,Figure 14.3.4-1.1.2,Box Plot of Change from Baseline of Laboratory Assessments Over Time - Chemistry,Safety Population,g_120_boxlb,1,F_14.3.4-1.1.2,10
+F,Figure 14.3.4-1.1.3,Box Plot of Observed Laboratory Assessments Over Time - Chemistry,Safety Population,g_120_boxlb,2,F_14.3.4-1.1.3,11
+F,Figure 14.3.4-1.3.2,Box Plot of Change from Baseline of Laboratory Assessments Over Time - Urinalysis,Safety Population,g_120_boxlb,5,F_14.3.4-1.3.2,12
+F,Figure 14.3.4-1.3.3,Box Plot of Observed Laboratory Assessments Over Time - Urinalysis,Safety Population,g_120_boxlb,6,F_14.3.4-1.3.3,13
