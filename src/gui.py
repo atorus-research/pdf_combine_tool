@@ -8,7 +8,7 @@ from tkinter.ttk import Progressbar
 from tkinter.ttk import Combobox
 
 from tkinter import messagebox
-from pdf_util import ProgressHandler
+from src.pdf_util import ProgressHandler
 
 
 def resource_path(relative_path):
