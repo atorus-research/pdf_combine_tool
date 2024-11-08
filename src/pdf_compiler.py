@@ -29,80 +29,120 @@ class PDFCompiler:
         self.CWD = ''
 
     def combine_pdfs(self):
-        # Disable 'GO' button after pressed.
+        """Combine PDFs and update progress bar"""
+        # Disable 'GO' button after pressed
         self.gui.btn_go.configure(state='disabled')
 
-        global font_folder, usage_font_c, METADATA
-
+        global font_folder, usage_font_c
         usage_font_c = str(self.gui.box_value.get())[:-7]
 
         self.gui.logger.warning('INFO: Selected font for TOC: ' + str(usage_font_c) + '.')
         font_folder = resource_path(os.path.join('assets', 'fonts', str(usage_font_c) + '.ttf'))
         self.CWD = self.gui.entry_var1.get()
         self.pathToRTF = os.path.join(self.CWD)
-        # Assign output filename.
-        self.gui.OUTPUT_FILENAME = self.gui.get_output_as()
-        self.util.mkdir(os.path.join(self.CWD, '_PDF'))
-        self.pathToPDF = os.path.join(self.CWD, '_PDF')
-        self.out_file_txt = os.path.normpath(os.path.join(self.pathToPDF, 'toc_file.txt'))
-        self.pathToFile = str(self.pathToPDF)[:-4] + str(self.gui.OUTPUT_FILENAME)
-        self.outFilePdfToc = self.pathToFile[:-4] + '_with_TOC.pdf'
-        self.outFilePdf = os.path.normpath(os.path.join(self.pathToPDF, 'toc_file.pdf'))
-        # remove toc_pdf file from previously running
-        try:
-            os.remove(self.outFilePdf)
-            os.remove(os.path.normpath(os.path.join(self.pathToRTF, 'toc_file.pdf')))
-        except Exception as e:
-            print("Not found file "+ str(self.outFilePdf ))
-            pass
 
-        METADATA = self.gui.entry_var2.get()
+        # Get metadata path first
+        metadata_path = self.gui.entry_var2.get()
+        if not metadata_path or not os.path.exists(metadata_path):
+            self.gui.logger.error('ERROR: Metadata file not found or not selected')
+            self.gui.btn_go.configure(state='normal')
+            return
 
-        # Get tlfmetadata and move to py dict.
-        self.util.assign_meta()
-
-        # Place ProgressBar onto main Frame after button 'GO!' is pressed.
+        # Place ProgressBar onto main Frame before starting operations
         self.gui.pb1.place(x=40, y=490, width=625, height=10)
-        self.gui.pb1['value'] = 0  # reset Progress Bar.
+        self.gui.pb1['value'] = 0  # reset Progress Bar
 
-        pbConstant = 8
-        numberOfLogEvents = self.util.get_event_number(METADATA)
+        # Use metadata_path instead of METADATA
+        tlfs, tlfs_count = self.util.get_tlf_list(metadata_path)
+        total_steps = (
+                1 +  # Initial setup
+                tlfs_count +  # PDF conversion
+                tlfs_count +  # Bookmark addition
+                1 +  # PDF combination
+                1  # Finalization
+        )
+        self.gui.pb1['maximum'] = total_steps
+        current_progress = 0
 
-        self.gui.pb1['maximum'] = pbConstant + numberOfLogEvents * 3
+        try:
+            # Initial setup
+            self.gui.OUTPUT_FILENAME = self.gui.get_output_as()
+            self.util.mkdir(os.path.join(self.CWD, '_PDF'))
+            self.pathToPDF = os.path.join(self.CWD, '_PDF')
+            self.out_file_txt = os.path.normpath(os.path.join(self.pathToPDF, 'toc_file.txt'))
+            self.pathToFile = str(self.pathToPDF)[:-4] + str(self.gui.OUTPUT_FILENAME)
+            self.outFilePdfToc = self.pathToFile[:-4] + '_with_TOC.pdf'
+            self.outFilePdf = os.path.normpath(os.path.join(self.pathToPDF, 'toc_file.pdf'))
 
-        # If check-box is off - then we need to convert raw files to PDF.
-        # After converted we can proceed and combine files.
-        # if self.gui.pas_check_var.get() == 0:
-        tlfs, tlfs_count = self.util.get_tlf_list(METADATA)
-        self.util.convert_to_pdf(in_list=tlfs, rtf_folder_dir=self.CWD, pdf_folder_dir=self.pathToPDF)
+            # Cleanup any existing files
+            for file in [self.outFilePdf, os.path.normpath(os.path.join(self.pathToRTF, 'toc_file.pdf'))]:
+                try:
+                    os.remove(file)
+                except Exception:
+                    pass
 
+            current_progress += 1
+            self.gui.pb1['value'] = current_progress
+            self.gui.root.update()
 
-        # Count how many files we have to combine.
-        count = tlfs_count
-        # Combine PDF files listed in list_pdf.
-        if tlfs_count > 0:
-            self.gui.logger.warning('\nNow combining outputs into PDF...')
-            self.gui.logger.warning('\nSearching in ' + str(self.pathToPDF))
-            self.util.add_bmk_to_file(input_dir=self.pathToPDF,
-                                      meta_data_file=METADATA,
-                                      title_sep=self.gui.title_separator,
-                                      add_popul=self.gui.add_population)
+            # Get metadata
+            self.util.assign_meta()
 
+            # Convert RTFs to PDFs
+            if tlfs_count > 0:
+                for tlf in tlfs:
+                    self.util.convert_to_pdf(in_list=[tlf], rtf_folder_dir=self.CWD, pdf_folder_dir=self.pathToPDF)
+                    current_progress += 1
+                    self.gui.pb1['value'] = current_progress
+                    self.gui.root.update()
 
-            self.util.go_combine_selected_pdf(dir=self.pathToPDF,
-                                              meta_data_=METADATA,
-                                              out_name=self.gui.OUTPUT_FILENAME,
-                                              prot_fl=False,
-                                              title_sep=self.gui.title_separator,
-                                              add_popul=self.gui.add_population)
+                # Add bookmarks
+                self.gui.logger.warning('\nNow combining outputs into PDF...')
+                self.gui.logger.warning('\nSearching in ' + str(self.pathToPDF))
 
-            self.gui.logger.warning(
-                '\nINFO: Job finished! ' + str(count) + ' files were added to ' + self.gui.OUTPUT_FILENAME)
-            self.gui.logger.warning('\nINFO: ' + self.gui.OUTPUT_FILENAME + ' is saved in ' + str(os.getcwd()))
-        else:
-            self.gui.logger.warning('WARNING: No files to concatenate. Check ' + str(self.pathToRTF) + '.')
-            # Reset Progress Bar
+                # Add bookmarks to each file
+                for _ in range(tlfs_count):
+                    self.util.add_bmk_to_file(
+                        input_dir=self.pathToPDF,
+                        meta_data_file=metadata_path,
+                        title_sep=self.gui.title_separator,
+                        add_popul=self.gui.add_population
+                    )
+                    current_progress += 1
+                    self.gui.pb1['value'] = current_progress
+                    self.gui.root.update()
+
+                # Combine PDFs
+                self.util.go_combine_selected_pdf(
+                    dir=self.pathToPDF,
+                    meta_data_=metadata_path,
+                    out_name=self.gui.OUTPUT_FILENAME,
+                    prot_fl=False,
+                    title_sep=self.gui.title_separator,
+                    add_popul=self.gui.add_population
+                )
+                current_progress += 1
+                self.gui.pb1['value'] = current_progress
+                self.gui.root.update()
+
+                self.gui.logger.warning(
+                    '\nINFO: Job finished! ' + str(tlfs_count) + ' files were added to ' + self.gui.OUTPUT_FILENAME)
+                self.gui.logger.warning('\nINFO: ' + self.gui.OUTPUT_FILENAME + ' is saved in ' + str(os.getcwd()))
+
+                # Final progress update
+                self.gui.pb1['value'] = total_steps
+                self.gui.root.update()
+            else:
+                self.gui.logger.warning('WARNING: No files to concatenate. Check ' + str(self.pathToRTF) + '.')
+                self.gui.pb1['value'] = 0
+
+        except Exception as e:
+            self.gui.logger.error(f'ERROR: An error occurred: {str(e)}')
             self.gui.pb1['value'] = 0
+            raise
+        finally:
+            # Re-enable the GO button regardless of success/failure
+            self.gui.btn_go.configure(state='normal')
 
     @staticmethod
     def get_toc_page_numb(path_to_pdf: str):
@@ -296,6 +336,12 @@ class PDFCompiler:
 
         pathToFile = str(self.pathToPDF)[:-4] + str(self.gui.OUTPUT_FILENAME)
 
+        # Get metadata path
+        metadata_path = self.gui.entry_var2.get()
+        if not metadata_path or not os.path.exists(metadata_path):
+            self.gui.logger.error('ERROR: Metadata file not found or not selected')
+            return
+
         df = self.extcract_bmk_to_list(pathToFile, page_w, bimo_tab_char, t_char, col_header)
 
         # REPLACE CHARACTER INTO BOOKMARK DATAFRAME IN CASE IF SELECTED FONT FROM PART SUPPORT FONT LIST
@@ -419,7 +465,7 @@ class PDFCompiler:
             print("Set password: ", self.gui.pas_check_var.get())
             print(self.gui.entry_var5.get())
             print('############################################################################')
-            tlfs, tlfs_count = self.util.get_tlf_list(METADATA)
+            tlfs, tlfs_count = self.util.get_tlf_list(metadata_path)
 
             result.save(self.outFilePdfToc, pretty=True, garbage=4, deflate=True,
                         encryption=fitz.PDF_ENCRYPT_AES_256,
