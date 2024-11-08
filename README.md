@@ -2,7 +2,7 @@
 # 
 # Introduction 
 The Utility developed for convert TLF's files into *.pdf and combine then according to meta-data file. 
-![Test Image 3](start.jpg)
+![Test Image 3](.img/start.jpg)
 
 # Getting Started
  
