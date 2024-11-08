@@ -1,0 +1,10 @@
+
+*.html
+*.pyc
+*.exe
+*.toc
+*.pyc
+*.xml
+build/
+pdf_comb_az/
+__pycache__/
