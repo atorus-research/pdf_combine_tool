@@ -304,7 +304,7 @@ class PDFUtility:
             self.gui.pb1['value'] = 0
 
     def add_bmk_to_file(self, input_dir: str, meta_data_file: str, title_sep: str, add_popul: bool = True) -> None:
-
+        """Add bookmarks to PDF files based on metadata"""
         df = pd.read_csv(meta_data_file)
         df = df.dropna(how='all')
         df['Filename'] = df['OutputName'].str.replace('-', '_')
@@ -319,44 +319,84 @@ class PDFUtility:
         file_bmk_dict = dict(zip(df.FilenamePDF, df.Bookmark))
 
         for file, bmk_txt in file_bmk_dict.items():
-            print("FINAL RUN MOOD: ", self.gui.final_run_var.get())
-            if self.gui.final_run_var.get(): #Final run - all files exists according to metadata file
+            if self.gui.final_run_var.get():
                 self.gui.logger.warning("Add bookmark to file " + str(file))
                 self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
-                with fitz.open(file) as _tmpfile:
-                    _tmpfile.set_toc([[1, bmk_txt, 1]])
-                    _tmpfile.name = file
-                    print(_tmpfile.can_save_incrementally())
-                    _tmpfile.saveIncr()
+                try:
+                    # Create temporary filename
+                    temp_file = file + ".tmp"
 
-            else: #temp run - not all files from metadata are into tfl's folder
-                if os.path.exists(file): #file exists - need to add bookmark
-                    self.gui.logger.warning("Add bookmark to file " + str(file))
-                    self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
-                    with fitz.open(file) as _tmpfile:
-                        _tmpfile.set_toc([[1, bmk_txt, 1]])
-                        _tmpfile.name = file
-                        print(_tmpfile.can_save_incrementally())
-                        _tmpfile.saveIncr()
+                    # Open original document
+                    doc = fitz.open(file)
+                    # Create new document
+                    new_doc = fitz.open()
+                    # Copy pages from original
+                    new_doc.insert_pdf(doc)
+                    # Set TOC
+                    new_doc.set_toc([[1, bmk_txt, 1]])
+                    # Save to temporary file
+                    new_doc.save(temp_file, garbage=4, deflate=True)
+                    new_doc.close()
+                    doc.close()
 
-                else: #file not exist - need to create it and add bookmark
+                    # Remove original and rename temp
+                    try:
+                        os.replace(temp_file, file)
+                    except PermissionError:
+                        # If direct replace fails, try alternative approach
+                        os.remove(file)
+                        os.rename(temp_file, file)
+
+                except Exception as e:
+                    self.gui.logger.error(f"Error processing file {file}: {str(e)}")
+                    # Try to clean up temp file if it exists
+                    if os.path.exists(temp_file):
+                        try:
+                            os.remove(temp_file)
+                        except:
+                            pass
+
+            else:  # temp run
+                if os.path.exists(file):
+                    try:
+                        # Same process as above for existing files
+                        temp_file = file + ".tmp"
+                        doc = fitz.open(file)
+                        new_doc = fitz.open()
+                        new_doc.insert_pdf(doc)
+                        new_doc.set_toc([[1, bmk_txt, 1]])
+                        new_doc.save(temp_file, garbage=4, deflate=True)
+                        new_doc.close()
+                        doc.close()
+
+                        try:
+                            os.replace(temp_file, file)
+                        except PermissionError:
+                            os.remove(file)
+                            os.rename(temp_file, file)
+
+                    except Exception as e:
+                        self.gui.logger.error(f"Error processing file {file}: {str(e)}")
+                        if os.path.exists(temp_file):
+                            try:
+                                os.remove(temp_file)
+                            except:
+                                pass
+
+                else:
                     self.gui.logger.warning("Create file: " + str(file))
                     bmk_txt = str(os.path.basename(file))[:-4] + "NO SUCH FILE IN TLF's FOLDER->Re-RUN to get bookmark"
                     self.gui.logger.warning("Bookmark to add_: " + str(bmk_txt))
 
-                    doc = fitz.open()
-                    page = doc.newPage()
-                    where = fitz.Point(50, 100)
-                    page.insertText(where, """NO SUCH FILE IN TLF's FOLDER""", fontsize=35)
-                    doc.save(file)
-
-                    with fitz.open(file) as _tmpfile:
-                        _tmpfile.set_toc([[1, bmk_txt, 1]])
-                        _tmpfile.name = file
-                        print(_tmpfile.can_save_incrementally())
-                        _tmpfile.saveIncr()
-
-
+                    try:
+                        doc = fitz.open()
+                        page = doc.new_page()
+                        page.insert_text(fitz.Point(50, 100), """NO SUCH FILE IN TLF's FOLDER""", fontsize=35)
+                        doc.set_toc([[1, bmk_txt, 1]])
+                        doc.save(file, garbage=4, deflate=True)
+                        doc.close()
+                    except Exception as e:
+                        self.gui.logger.error(f"Error creating placeholder file {file}: {str(e)}")
 
     def go_combine_selected_pdf(self, dir, meta_data_, out_name, title_sep: str, add_popul: bool = True,
                                 prot_fl: bool =False):

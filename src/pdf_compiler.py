@@ -270,16 +270,14 @@ class PDFCompiler:
 
     # Prepare TOC shell file
     def add_toc(self):
-
+        """Add table of contents to the combined PDF"""
         t_char = '*page:'
         bimo_tab_char = '$$$$'
         bimo_tabulation_replace = '    '
 
         col_header = ['name', 'page']
         PR_TO_IN = 1 / 72
-        pdf_del = False #flag for remove _PDF folder
-        # set page width as length of string: int ->  number of symbols
-        # default value
+        pdf_del = False
         page_w = 152
 
         self.out_file_txt = str(self.pathToPDF) + "\\" + 'toc_file.txt'
@@ -287,13 +285,13 @@ class PDFCompiler:
         # custom value for specific fonts
         if usage_font_c == 'VictorMono':
             page_w = 167
-        if usage_font_c == 'Monoid':
+        elif usage_font_c == 'Monoid':
             page_w = 160
-        if usage_font_c == 'EversonMono':
+        elif usage_font_c == 'EversonMono':
             page_w = 159
-        if usage_font_c == 'Lekton':
+        elif usage_font_c == 'Lekton':
             page_w = 182
-        if usage_font_c == 'CamingoCode':
+        elif usage_font_c == 'CamingoCode':
             page_w = 166
 
         pathToFile = str(self.pathToPDF)[:-4] + str(self.gui.OUTPUT_FILENAME)
@@ -327,13 +325,14 @@ class PDFCompiler:
         with open(self.out_file_txt, "w", encoding="utf-8") as f:
             np.savetxt(f, df.to_numpy(), fmt='%s')
 
-        # get page size from main document
-        self.doc = fitz.open(pathToFile)
-        page = self.doc.loadPage(0)
-        main_doc_page_size = page.MediaBox[2:]
-        self.doc.close()
+        # Get page size from main document
+        doc = fitz.open(pathToFile)
+        page = doc[0]  # Get first page
+        main_doc_page_size = page.rect.br  # Get bottom-right point of page rect
+        doc.close()
+
         Page = namedtuple("Page", "width height")
-        page_size = Page(main_doc_page_size[0], main_doc_page_size[1])
+        page_size = Page(main_doc_page_size.x, main_doc_page_size.y)
 
         # convert txt file to pdf to get toc-pdf file number of pages
         self.make_toc_pdf(input_file=self.out_file_txt, page_char=t_char, w_page=page_w,
@@ -433,50 +432,39 @@ class PDFCompiler:
 
         self.gui.logger.warning('INFO: TOC successfully created!')
 
-        # delete toc-pdf file
+        # Cleanup section
         try:
-            os.remove(self.outFilePdf)
+            # Remove temporary PDF file
+            if os.path.exists(self.outFilePdf):
+                os.remove(self.outFilePdf)
         except Exception as e:
-            print("REM TOC FILE: ")
-            print(e)
+            self.gui.logger.error(f"Error removing temporary PDF: {str(e)}")
 
-        # os.remove(self.outFilePdf)
-        # delete temp txt files
-        os.remove(self.out_file_txt)
-        _ = str(usage_font_c) + '.pkl'
-        os.remove(_)
+        try:
+            # Remove temporary txt file
+            if os.path.exists(self.out_file_txt):
+                os.remove(self.out_file_txt)
+        except Exception as e:
+            self.gui.logger.error(f"Error removing temporary txt file: {str(e)}")
 
-        # if pdf_del == True:
-        #     print(self.pathToPDF)
-        #     rem_msg = ''
-        #     file_lst_to_rem = os.listdir(self.pathToPDF)
-        #     for elem in file_lst_to_rem:
-        #         pdf_file_to_read = os.path.join(self.pathToPDF, elem)
-        #         try:
-        #             os.rename(pdf_file_to_read, pdf_file_to_read)
-        #         except Exception as e:  # [WinError 32]
-        #             rem_msg = "Can not remove _PDF folder because file " + (
-        #                 elem) + " it is being used by another process"
-        #             print(rem_msg)
-        #     for elem_ in file_lst_to_rem:
-        #         pdf_file_to_read = os.path.join(self.pathToPDF, elem_)
-        #         try:
-        #             with open(pdf_file_to_read, 'rb') as f:
-        #                 pass
-        #         except Exception as e:  # [WinError 32]
-        #             rem_msg = "Can not close _PDF folder because file " + (
-        #                 elem_) + " it is being used by another process"
-        #
-        #     if rem_msg == '':
-        #         shutil.rmtree(self.pathToPDF)
-        #     else:
-        #         messagebox.showinfo(title="Unable remove _PDF", message=rem_msg)
+        # Remove font cache file if it exists
+        try:
+            font_cache = f"{usage_font_c}.pkl"
+            if os.path.exists(font_cache):
+                os.remove(font_cache)
+        except Exception as e:
+            self.gui.logger.warning(f"Could not remove font cache file: {str(e)}")
+            # Non-critical error, we can continue
 
-        q = messagebox.askokcancel(title=None, message="Combined pdf ready and save at " + str(self.outFilePdfToc) +
-                                                       ". Do you want to open the file?",
-                                   default='ok')
-        if q == True:
-            os.startfile(self.outFilePdfToc)
+        # Show final message and file
+        if os.path.exists(self.outFilePdfToc):
+            q = messagebox.askokcancel(
+                title="PDF Created",
+                message=f"Combined pdf ready and saved at {self.outFilePdfToc}. Do you want to open the file?",
+                default='ok'
+            )
+            if q:
+                os.startfile(self.outFilePdfToc)
 
-        # Make 'GO' button active again.
+        # Make 'GO' button active again
         self.gui.btn_go.config(state='normal')
