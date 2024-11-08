@@ -24,11 +24,6 @@ jobs:
         pip install pyinstaller
         pip install -r requirements.txt
 
-    - name: Create Directories
-      run: |
-        mkdir .img
-        mkdir .font
-
     - name: Build with PyInstaller
       run: |
         pyinstaller main.spec
