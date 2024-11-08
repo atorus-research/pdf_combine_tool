@@ -28,6 +28,30 @@ class PDFUtility:
         CWD = self.gui.entry_var1.get()
         self.meta_source = {}
 
+    def combine_pdfs_simple(self, pdf_files, output_name, use_password=False, password=None):
+        """Combine PDFs without TOC or bookmarks"""
+        try:
+            with fitz.open() as result:
+                for pdf in pdf_files:
+                    with fitz.open(pdf) as mfile:
+                        result.insert_pdf(mfile)
+
+                if use_password:
+                    result.save(
+                        output_name,
+                        encryption=fitz.PDF_ENCRYPT_AES_256,
+                        owner_pw=password,
+                        garbage=4,
+                        deflate=True
+                    )
+                else:
+                    result.save(output_name, garbage=4, deflate=True)
+
+            return True
+        except Exception as e:
+            self.gui.logger.error(f'ERROR: Failed to combine PDFs: {str(e)}')
+            return False
+
     # Browse the current working directory for files to combine.
     # Pass the path to CWD.
     def select_folder(self):
@@ -219,7 +243,7 @@ class PDFUtility:
 
     # TODO: TO_THINK: run  with multithreads, parallelization?
     def rtf_file_to_pdf(self, file_name: str, input_dir: str, output_dir: str, pause_time: float) -> None:
-        word = None  # declare variable 'word'.
+        word = None
         wdFormatPDF = 17
         wdDoNotSaveChanges = 0
 
@@ -228,41 +252,26 @@ class PDFUtility:
         in_file = os.path.normpath(os.path.join(input_dir, file_name))
         output_file = os.path.splitext(file_name)[0]
         out_file = os.path.normpath(os.path.join(output_dir, output_file + '.pdf'))
-        self.gui.logger.warning('Converting ' + str(file_name) + '...')
 
         if os.path.isfile(out_file):
-            self.gui.logger.warning(str(file_name) + ' has been detected and do not need to convert to PDF.')
+            self.gui.logger.warning(f'{file_name} already exists as PDF')
+            return
 
-        else:
-            if self.gui.final_run_var.get() == 1: #Raise Error and abort - Final run mood, no file
-                try:
-                    doc = word.Documents.Open(in_file, False, False, True)  # 'True' as a 3d param tell to open in ReadOnly.
-                    doc.SaveAs(out_file, FileFormat=wdFormatPDF)
-                    doc.Close(SaveChanges=wdDoNotSaveChanges)
-                    time.sleep(pause_time)
-                    self.gui.logger.warning(str(file_name) + ' has been converted to PDF.')
-                    # out_file.close()
-                except Exception as e:
-                    print(e)
-                    self.gui.logger.error('ERROR: Error handle while converting ' + str(file_name) + ' file.')
-                    messagebox.showerror(title='File convert error',
-                                         message='ERROR: Error handle while converting ' + str(file_name) +
-                                                                              '. Check metadata file and '
-                                                                              'TLF  file.', default='ok')
-                    os.abort()
-            else:
-                try:
-                    doc = word.Documents.Open(in_file, False, False, True)  # 'True' as a 3d param tell to open in ReadOnly.
-                    doc.SaveAs(out_file, FileFormat=wdFormatPDF)
-                    doc.Close(SaveChanges=wdDoNotSaveChanges)
-                    time.sleep(pause_time)
-                    self.gui.logger.warning(str(file_name) + ' has been converted to PDF.')
-
-                except Exception as e:
-                    self.gui.logger.error("Sorry, we couldn't find your file. Was it moved, renamed or deleted? "
-                                          + str(file_name) + ' file.')
-                    pass
-
+        try:
+            doc = word.Documents.Open(in_file, False, False, True)
+            doc.SaveAs(out_file, FileFormat=wdFormatPDF)
+            doc.Close(SaveChanges=wdDoNotSaveChanges)
+            time.sleep(pause_time)
+            self.gui.logger.warning(f'{file_name} has been converted to PDF')
+        except Exception as e:
+            self.gui.logger.error(f'ERROR: Error while converting {file_name}: {str(e)}')
+            if self.gui.final_run_var.get() == 1:
+                messagebox.showerror('File convert error',
+                                     f'ERROR: Error while converting {file_name}. Check metadata file and TLF file.')
+                os.abort()
+        finally:
+            if word:
+                word.Quit()
 
     def convert_to_pdf(self, in_list: list, rtf_folder_dir: str, pdf_folder_dir: str) -> None:
         """
@@ -273,35 +282,24 @@ class PDFUtility:
 
         :return: N/A
         """
-        # ask user to close all word processes for avoid freeze during convertation
+        # ask user to close all word processes for avoid freeze during conversion
         self.close_word_proc()
-        #check if all files from pdf_to_keep present into folder -> convert while not true
-        in_folder_pdf = tuple(os.path.join(elem)[:-4]+'.rtf' for elem in os.listdir(pdf_folder_dir) if
-                       pathlib.Path(elem).suffix == '.pdf')
-        s = set(in_folder_pdf)
-        _tm = tuple(x for x in in_list if x not in s)
 
-        if _tm:
+        in_folder_pdf = {os.path.join(elem)[:-4] + '.rtf' for elem in os.listdir(pdf_folder_dir)
+                         if pathlib.Path(elem).suffix == '.pdf'}
+        files_to_convert = [x for x in in_list if x not in in_folder_pdf]
+
+        if files_to_convert:
             if self.gui.final_run_var.get() == 1:
-                while len(_tm) != 0:
-                    for file in _tm:
-                        self.rtf_file_to_pdf(file_name=file, input_dir=rtf_folder_dir,
-                                             output_dir=pdf_folder_dir, pause_time=0.5)
-                        in_folder_pdf = tuple(os.path.join(elem)[:-4] + '.rtf' for elem in os.listdir(pdf_folder_dir) if
-                                              pathlib.Path(elem).suffix == '.pdf')
-                        s = set(in_folder_pdf)
-                        _tm = tuple(x for x in in_list if x not in s)
-            else:
-                for file in _tm:
+                for file in files_to_convert:
                     self.rtf_file_to_pdf(file_name=file, input_dir=rtf_folder_dir,
                                          output_dir=pdf_folder_dir, pause_time=0.5)
-                    in_folder_pdf = tuple(os.path.join(elem)[:-4] + '.rtf' for elem in os.listdir(pdf_folder_dir) if
-                                          pathlib.Path(elem).suffix == '.pdf')
-                    s = set(in_folder_pdf)
-                    _tm = tuple(x for x in in_list if x not in s)
+            else:
+                for file in files_to_convert:
+                    self.rtf_file_to_pdf(file_name=file, input_dir=rtf_folder_dir,
+                                         output_dir=pdf_folder_dir, pause_time=0.5)
         else:
-            # Reset Progress Bar
-            self.gui.pb1['value'] = 0
+            self.gui.logger.warning('No new files to convert')
 
     def add_bmk_to_file(self, input_dir: str, meta_data_file: str, title_sep: str, add_popul: bool = True) -> None:
         """Add bookmarks to PDF files based on metadata"""

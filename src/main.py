@@ -23,10 +23,20 @@ pc = PDFCompiler(gui=gui, util=util)
 
 # Link BTN1 from GUI with SELECT_FOLDER command from Action class.
 gui.link_btn_to_command(btn=gui.btn1, command=util.select_folder)
-# Link BTN2 from GUI with SELECT_METADATA command from Action class..
+# Link BTN2 from GUI with SELECT_METADATA command from Action class.
 gui.link_btn_to_command(btn=gui.btn2, command=util.select_metadata)
-# Link BTN_GO from GUI with COMBINE_PDFs command from Action class..
-gui.link_btn_to_command(btn=gui.btn_go, command=lambda:[pc.combine_pdfs(), pc.add_toc()])
+
+
+def execute_pdf_operations():
+    if gui.toc_var.get() == 'no_toc':
+        pc.combine_pdfs()  # This will now return early for no_toc
+    else:
+        pc.combine_pdfs()
+        pc.add_toc()
+
+
+# Link BTN_GO from GUI with COMBINE_PDFs command from Action class.
+gui.link_btn_to_command(btn=gui.btn_go, command=execute_pdf_operations)
 
 # Change background color for all widgets.
 gui.change_bg_color(gui.root.winfo_children(), 'white')
