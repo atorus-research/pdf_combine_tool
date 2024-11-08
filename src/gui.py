@@ -12,16 +12,13 @@ from src.pdf_util import ProgressHandler
 
 
 def resource_path(relative_path):
-    """
-    Get absolute path to resource, works for dev and for PyInstaller.
-    pyinstaller unpacks your data into a temporary folder, and stores this
-    directory path in the _MEIPASS2 environment variable.
-    mode, I use this:"""
+    """Get absolute path to resource, works for dev and PyInstaller"""
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.abspath("..")
+        # Running in development mode
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     return os.path.normpath(os.path.join(base_path, relative_path))
 
@@ -39,18 +36,18 @@ class GUICore:
         self.OUTPUT_FILENAME = 'combined'
         self.TLF_METADATA_NAME = 'tlfmetadata'
         # Insert Atorus logo.
-        img1 = PhotoImage(file=resource_path(os.path.join('../assets/images', 'atorus_logo.png')))
+        img1 = PhotoImage(file=resource_path(os.path.join('assets', 'images', 'atorus_logo.png')))
         banner1 = Label(self.root, image=img1)
         banner1.image = img1
         banner1.place(x=40, y=4)
 
         # Insert PDF Utility logo.
-        img2 = PhotoImage(file=resource_path(os.path.join('../assets/images', 'pdf_utility_logo.png'))).subsample(2, 2)
+        img2 = PhotoImage(file=resource_path(os.path.join('assets', 'images', 'pdf_utility_logo.png'))).subsample(2, 2)
         banner2 = Label(self.root, image=img2)
         banner2.image = img2
         banner2.place(x=190, y=12)
         # Insert Python logo.
-        img3 = PhotoImage(file=resource_path(os.path.join('../assets/images', 'python_logo.png'))).subsample(2, 2)
+        img3 = PhotoImage(file=resource_path(os.path.join('assets', 'images', 'python_logo.png'))).subsample(2, 2)
         banner3 = Label(self.root, image=img3)
         banner3.image = img3
         banner3.place(x=405, y=12)
