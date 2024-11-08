@@ -35,7 +35,7 @@ class PDFCompiler:
         usage_font_c = str(self.gui.box_value.get())[:-7]
 
         self.gui.logger.warning('INFO: Selected font for TOC: ' + str(usage_font_c) + '.')
-        font_folder = os.path.dirname(os.path.realpath(__file__)) + '\\.font\\' + str(usage_font_c) + '.ttf'
+        font_folder = os.path.dirname(os.path.realpath(__file__)) + '\\fonts\\' + str(usage_font_c) + '.ttf'
         self.CWD = self.gui.entry_var1.get()
         self.pathToRTF = os.path.join(self.CWD)
         # Assign output filename.

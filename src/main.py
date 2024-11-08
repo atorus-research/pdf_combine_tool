@@ -2,10 +2,9 @@
 # coding: utf-8
 
 import logging
-
-from gui import GUICore
-from pdf_compiler import PDFCompiler
-from pdf_util import PDFUtility
+from src.gui import GUICore
+from src.pdf_compiler import PDFCompiler
+from src.pdf_util import PDFUtility
 
 # Set logging level.
 logging.basicConfig(level=logging.WARNING)
@@ -15,7 +14,6 @@ gui = GUICore()
 
 # Set parameters of main window.
 gui.root.geometry('720x520')
-
 
 # Create object of Utility class.
 util = PDFUtility(gui)

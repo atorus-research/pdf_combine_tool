@@ -1,13 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-
 block_cipher = None
 
-
-a = Analysis(['main.py'],
+a = Analysis(['src/main.py'],
              pathex=[],
              binaries=[],
-             datas=[('.font', '.font'), ('.img', '.img')],
+             datas=[('assets/fonts', 'fonts'), ('assets/images', 'images')],
              hiddenimports=['pkg_resources.py2_warn'],
              hookspath=[],
              hooksconfig={},
@@ -18,15 +16,15 @@ a = Analysis(['main.py'],
              cipher=block_cipher,
              noarchive=False)
 pyz = PYZ(a.pure, a.zipped_data,
-             cipher=block_cipher)
+          cipher=block_cipher)
 
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
-          a.datas,  
+          a.datas,
           [],
-          name='main',
+          name='PDF Combine',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -37,4 +35,4 @@ exe = EXE(pyz,
           disable_windowed_traceback=False,
           target_arch=None,
           codesign_identity=None,
-          entitlements_file=None , icon='.img/pdf.ico')
+          entitlements_file=None, icon='assets/images/pdf.ico')
