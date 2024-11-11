@@ -29,18 +29,6 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pytest-cov pytest-benchmark pytest-mock
 
-    - name: Create test assets
-      run: |
-        mkdir -p assets/images
-        mkdir -p assets/fonts
-        mkdir -p examples
-        mkdir -p tests
-        echo "Test data" > examples/metadata_example.csv
-        echo "Test image" > assets/images/atorus_logo.png
-        echo "Test image" > assets/images/pdf_utility_logo.png
-        echo "Test image" > assets/images/python_logo.png
-        echo "Test icon" > assets/images/pdf.ico
-
     - name: Run core tests
       run: |
         pytest tests/ -v -m "not benchmark and not win32" --cov=src/ --cov-report=xml --cov-report=html
