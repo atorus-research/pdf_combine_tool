@@ -24,3 +24,6 @@ pywin32==303
 six==1.16.0
 tzdata==2024.2
 wincertstore==0.2
+pytest
+pytest-mock
+pytest-cov
