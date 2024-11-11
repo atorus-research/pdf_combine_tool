@@ -32,4 +32,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: pdf-combine-utility
-        path: dist/main.exe
+        path: dist/PDF Combine.exe
