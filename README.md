@@ -18,7 +18,7 @@ A nice, simple and fast GUI application for combining RTF/PDF files with automat
 ### Prerequisites
 
 - Windows operating system
-- Python 3.10 or higher
+- Python 3.11 or higher
 - Required Python packages (see `requirements.txt`)
 
 ### Installing Dependencies

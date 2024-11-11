@@ -7,7 +7,6 @@ import tempfile
 import shutil
 from src.pdf_util import PDFUtility
 from src.pdf_compiler import PDFCompiler
-import win32com.client
 
 
 @pytest.fixture
