@@ -139,7 +139,7 @@ class PDFCompiler:
                     self.gui.root.update()
 
                 # Combine PDFs
-                self.util.go_combine_selected_pdf(
+                combined = self.util.go_combine_selected_pdf(
                     dir=self.pathToPDF,
                     meta_data_=metadata_path,
                     out_name=self.gui.OUTPUT_FILENAME,
@@ -147,13 +147,23 @@ class PDFCompiler:
                     title_sep=self.gui.title_separator,
                     add_popul=self.gui.add_population
                 )
-                current_progress += 1
-                self.gui.pb1['value'] = current_progress
-                self.gui.root.update()
+
+                if combined:
+                    current_progress += 1
+                    self.gui.pb1['value'] = current_progress
+                    self.gui.root.update()
+
+                    # Only add TOC if files were actually combined
+                    self.add_toc()
+
+                pdfs_count = len([f for f in os.listdir(self.pathToPDF) if f.endswith('.pdf')])
 
                 self.gui.logger.warning(
-                    '\nINFO: Job finished! ' + str(tlfs_count) + ' files were added to ' + self.gui.OUTPUT_FILENAME)
-                self.gui.logger.warning('\nINFO: ' + self.gui.OUTPUT_FILENAME + ' is saved in ' + str(os.getcwd()))
+                    f'\nINFO: Job finished! {tlfs_count} files were processed and '
+                    f'{pdfs_count} were added to {self.gui.OUTPUT_FILENAME}')
+
+                if pdfs_count > 0:
+                    self.gui.logger.warning('\nINFO: ' + self.gui.OUTPUT_FILENAME + ' is saved in ' + str(os.getcwd()))
 
                 # Final progress update
                 self.gui.pb1['value'] = total_steps

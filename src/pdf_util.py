@@ -224,54 +224,81 @@ class PDFUtility:
 
         return dict(zip(output_id, output_title))
 
-    @staticmethod
-    def close_word_proc(proc_tuple=("word", "winword", "WINWORD", "splwow64.exe"), silent=False):
+    def close_word_proc(self, proc_tuple=("word", "winword", "WINWORD", "splwow64.exe"), silent=False):
         """
-         Check if word application or print service are running and kill them to avoid freeze tool
-         :param proc_tuple: list of process to check, default values word and print service
-         :return: None
-         """
+        Check if word application or print service are running and kill them
+        """
         for proc in psutil.process_iter():
             if any(procstr in proc.name() for procstr in proc_tuple):
                 if not silent:
-                    result = messagebox.askquestion(title="Word process running",
-                                                    message='All Word related processes should be closed before run.' + \
-                                                            "\nClose all Word processes?")
-
-                if result or silent:
-                    proc.kill()
+                    result = messagebox.askquestion(
+                        title="Word process running",
+                        message='All Word related processes should be closed before run.\nClose all Word processes?'
+                    )
+                    if result == 'yes':
+                        try:
+                            proc.kill()
+                        except:
+                            pass
+                else:
+                    # In silent mode, kill process without asking
+                    try:
+                        proc.kill()
+                    except:
+                        pass
 
     # TODO: TO_THINK: run  with multithreads, parallelization?
     def rtf_file_to_pdf(self, file_name: str, input_dir: str, output_dir: str, pause_time: float) -> None:
+        """Convert RTF to PDF with improved process handling"""
         word = None
-        wdFormatPDF = 17
-        wdDoNotSaveChanges = 0
+        max_retries = 3
+        retry_count = 0
 
-        word = win32com.client.gencache.EnsureDispatch('Word.Application')
+        while retry_count < max_retries:
+            try:
+                word = win32com.client.gencache.EnsureDispatch('Word.Application')
+                word.Visible = False
 
-        in_file = os.path.normpath(os.path.join(input_dir, file_name))
-        output_file = os.path.splitext(file_name)[0]
-        out_file = os.path.normpath(os.path.join(output_dir, output_file + '.pdf'))
+                in_file = os.path.normpath(os.path.join(input_dir, file_name))
+                output_file = os.path.splitext(file_name)[0]
+                out_file = os.path.normpath(os.path.join(output_dir, output_file + '.pdf'))
 
-        if os.path.isfile(out_file):
-            self.gui.logger.warning(f'{file_name} already exists as PDF')
-            return
+                if os.path.isfile(out_file):
+                    self.gui.logger.warning(f'{file_name} already exists as PDF')
+                    return
 
-        try:
-            doc = word.Documents.Open(in_file, False, False, True)
-            doc.SaveAs(out_file, FileFormat=wdFormatPDF)
-            doc.Close(SaveChanges=wdDoNotSaveChanges)
-            time.sleep(pause_time)
-            self.gui.logger.warning(f'{file_name} has been converted to PDF')
-        except Exception as e:
-            self.gui.logger.error(f'ERROR: Error while converting {file_name}: {str(e)}')
+                doc = word.Documents.Open(in_file, False, False, True)
+                doc.SaveAs(out_file, FileFormat=17)  # wdFormatPDF = 17
+                doc.Close(SaveChanges=0)  # wdDoNotSaveChanges = 0
+                time.sleep(pause_time)
+                self.gui.logger.warning(f'{file_name} has been converted to PDF')
+                return
+
+            except Exception as e:
+                retry_count += 1
+                self.gui.logger.warning(f'Attempt {retry_count} failed for {file_name}: {str(e)}')
+                try:
+                    if doc:
+                        doc.Close(SaveChanges=0)
+                except:
+                    pass
+
+            finally:
+                try:
+                    if word:
+                        word.Quit()
+                except:
+                    pass
+
+                # Force cleanup of any hanging processes
+                self.close_word_proc(silent=True)
+
+        if retry_count >= max_retries:
+            error_msg = f'Failed to convert {file_name} after {max_retries} attempts'
+            self.gui.logger.error(error_msg)
             if self.gui.final_run_var.get() == 1:
-                messagebox.showerror('File convert error',
-                                     f'ERROR: Error while converting {file_name}. Check metadata file and TLF file.')
+                messagebox.showerror('File convert error', error_msg)
                 os.abort()
-        finally:
-            if word:
-                word.Quit()
 
     def convert_to_pdf(self, in_list: list, rtf_folder_dir: str, pdf_folder_dir: str) -> None:
         """
@@ -308,180 +335,115 @@ class PDFUtility:
         df['Filename'] = df['OutputName'].str.replace('-', '_')
         df['Filename'] = df['Filename'].str.replace('.', '_')
         df['Filename'] = df['Filename'] + ".rtf"
-        df['FilenamePDF'] = input_dir + '\\' + df.Filename.str.slice(0, -4) + '.pdf'
+        df['FilenamePDF'] = df['Filename'].str[:-4] + '.pdf'
+        df['FilenamePDF'] = df['FilenamePDF'].apply(lambda x: os.path.join(input_dir, x))
+
         if add_popul:
             df['Bookmark'] = df['Title3'] + str(title_sep) + df['Title4'] + str(title_sep) + df['Title5']
         else:
             df['Bookmark'] = df['Title3'] + str(title_sep) + df['Title4']
 
-        file_bmk_dict = dict(zip(df.FilenamePDF, df.Bookmark))
+        # Filter to only existing files
+        existing_files = df[df['FilenamePDF'].apply(os.path.exists)]
 
-        for file, bmk_txt in file_bmk_dict.items():
-            if self.gui.final_run_var.get():
-                self.gui.logger.warning("Add bookmark to file " + str(file))
-                self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
+        if existing_files.empty:
+            self.gui.logger.warning("No PDF files found matching metadata entries")
+            return
+
+        # Process each file individually
+        for _, row in existing_files.iterrows():
+            file = row['FilenamePDF']
+            bmk_txt = row['Bookmark']
+
+            self.gui.logger.warning("Add bookmark to file " + str(file))
+            self.gui.logger.warning("Bookmark to add: " + str(bmk_txt))
+
+            try:
+                temp_file = file + ".tmp"
+                doc = fitz.open(file)
+                new_doc = fitz.open()
+                new_doc.insert_pdf(doc)
+                new_doc.set_toc([[1, bmk_txt, 1]])
+                new_doc.save(temp_file, garbage=4, deflate=True)
+                new_doc.close()
+                doc.close()
+
                 try:
-                    # Create temporary filename
-                    temp_file = file + ".tmp"
+                    os.replace(temp_file, file)
+                except PermissionError:
+                    os.remove(file)
+                    os.rename(temp_file, file)
 
-                    # Open original document
-                    doc = fitz.open(file)
-                    # Create new document
-                    new_doc = fitz.open()
-                    # Copy pages from original
-                    new_doc.insert_pdf(doc)
-                    # Set TOC
-                    new_doc.set_toc([[1, bmk_txt, 1]])
-                    # Save to temporary file
-                    new_doc.save(temp_file, garbage=4, deflate=True)
-                    new_doc.close()
-                    doc.close()
-
-                    # Remove original and rename temp
+            except Exception as e:
+                self.gui.logger.error(f"Error processing file {file}: {str(e)}")
+                if os.path.exists(temp_file):
                     try:
-                        os.replace(temp_file, file)
-                    except PermissionError:
-                        # If direct replace fails, try alternative approach
-                        os.remove(file)
-                        os.rename(temp_file, file)
-
-                except Exception as e:
-                    self.gui.logger.error(f"Error processing file {file}: {str(e)}")
-                    # Try to clean up temp file if it exists
-                    if os.path.exists(temp_file):
-                        try:
-                            os.remove(temp_file)
-                        except:
-                            pass
-
-            else:  # temp run
-                if os.path.exists(file):
-                    try:
-                        # Same process as above for existing files
-                        temp_file = file + ".tmp"
-                        doc = fitz.open(file)
-                        new_doc = fitz.open()
-                        new_doc.insert_pdf(doc)
-                        new_doc.set_toc([[1, bmk_txt, 1]])
-                        new_doc.save(temp_file, garbage=4, deflate=True)
-                        new_doc.close()
-                        doc.close()
-
-                        try:
-                            os.replace(temp_file, file)
-                        except PermissionError:
-                            os.remove(file)
-                            os.rename(temp_file, file)
-
-                    except Exception as e:
-                        self.gui.logger.error(f"Error processing file {file}: {str(e)}")
-                        if os.path.exists(temp_file):
-                            try:
-                                os.remove(temp_file)
-                            except:
-                                pass
-
-                else:
-                    self.gui.logger.warning("Create file: " + str(file))
-                    bmk_txt = str(os.path.basename(file))[:-4] + "NO SUCH FILE IN TLF's FOLDER->Re-RUN to get bookmark"
-                    self.gui.logger.warning("Bookmark to add_: " + str(bmk_txt))
-
-                    try:
-                        doc = fitz.open()
-                        page = doc.new_page()
-                        page.insert_text(fitz.Point(50, 100), """NO SUCH FILE IN TLF's FOLDER""", fontsize=35)
-                        doc.set_toc([[1, bmk_txt, 1]])
-                        doc.save(file, garbage=4, deflate=True)
-                        doc.close()
-                    except Exception as e:
-                        self.gui.logger.error(f"Error creating placeholder file {file}: {str(e)}")
+                        os.remove(temp_file)
+                    except:
+                        pass
 
     def go_combine_selected_pdf(self, dir, meta_data_, out_name, title_sep: str, add_popul: bool = True,
-                                prot_fl: bool =False):
-
-        def fitz_combine(pdf_files, out_name_, prot_fl_=False):
-            with fitz.open() as result:
-                general_toc, tmp_toc = None, None
-
-                for pdf in pdf_files:
-                    with fitz.open(pdf) as mfile:
-                        pages = len(result)
-                        result.insert_pdf(mfile)
-                        if not general_toc:
-                            general_toc = mfile.get_toc(simple=True)
-                        else:
-                            tmp_toc = mfile.get_toc(simple=True)
-                            for t in tmp_toc:  # increase toc2 page numbers
-                                t[2] += pages  # by old len(doc1)
-                            general_toc += tmp_toc
-
-                # general_toc.sort()
-                general_toc = list(k for k, _ in itertools.groupby(general_toc))
-                result.set_toc(general_toc)
-                if prot_fl_:
-                    result.save(out_name_, pretty=True, garbage=4, deflate=True, encryption=4, user_pw="ewq321")
-                else:
-                    result.save(out_name_, pretty=True, garbage=4, deflate=True)
-
-
-        # TODO: move to fucn (Dataframe to order list)
+                                prot_fl: bool = False):
         df = pd.read_csv(meta_data_)
         df = df.dropna(how='all')
         df['Filename'] = df['OutputName'].str.replace('-', '_')
         df['Filename'] = df['Filename'].str.replace('.', '_')
         df['Filename'] = df['Filename'] + ".rtf"
 
+        df['FilenamePDF'] = df['Filename'].str[:-4] + '.pdf'
+        existing_files = df[df['FilenamePDF'].apply(lambda x: os.path.exists(os.path.join(dir, x)))]
+
+        if existing_files.empty:
+            self.gui.logger.warning("No PDF files found to combine")
+            return False
+
         if add_popul:
-            df['Bookmark'] = df['Title3'] + str(title_sep) + df['Title4'] + str(title_sep) + df['Title5']
+            existing_files.loc[:, 'Bookmark'] = existing_files['Title3'] + str(title_sep) + existing_files[
+                'Title4'] + str(title_sep) + existing_files['Title5']
         else:
-            df['Bookmark'] = df['Title3'] + str(title_sep) + df['Title4']
+            existing_files.loc[:, 'Bookmark'] = existing_files['Title3'] + str(title_sep) + existing_files['Title4']
 
-        tmp_file_order_dict = dict(zip(df['Order'], df['Filename']))
-        tmp_file_bookmark_dict = dict(zip(df['Filename'], df['Bookmark']))
-        tmp_file_order_dict = {k: v[:-3] + 'pdf' for k, v in tmp_file_order_dict.items()}
-        tmp_file_bookmark_dict = {k[:-3] + 'pdf': v for k, v in tmp_file_bookmark_dict.items()}
-
-        order_dict = dict(sorted(tmp_file_order_dict.items()))
+        order_dict = dict(zip(existing_files['Order'], existing_files['FilenamePDF']))
         pdf_files_ = tuple(os.path.join(dir, v) for k, v in dict(sorted(order_dict.items())).items())
 
-        FILE_CONST = 400
-        if len(pdf_files_) <= FILE_CONST:
-            fitz_combine(pdf_files=pdf_files_, out_name_=out_name, prot_fl_=prot_fl)
+        if pdf_files_:
+            # Use self.gui.CWD to get the correct working directory
+            out_path = os.path.join(dir, '..', out_name)
+            self._fitz_combine(pdf_files_, out_path, prot_fl)
+            self.gui.logger.warning(f'\nINFO: Job finished! {len(pdf_files_)} files were combined into {out_name}')
+            self.gui.logger.warning(f'\nINFO: {out_name} is saved in {os.path.dirname(out_path)}')
+            return True
+        return False
+
+    def _fitz_combine(self, pdf_files_, output_name, prot_fl=False):
+        """Combine PDFs using PyMuPDF (fitz)"""
+        result = fitz.open()
+        general_toc = []
+        current_page = 1
+
+        for pdf in pdf_files_:
+            with fitz.open(pdf) as mfile:
+                pages = len(result)
+                result.insert_pdf(mfile)
+                tmp_toc = mfile.get_toc(simple=True)
+                if tmp_toc:
+                    for t in tmp_toc:
+                        t[2] += pages
+                    general_toc.extend(tmp_toc)
+
+        if general_toc:
+            result.set_toc(general_toc)
+
+        if self.gui.pas_check_var.get() and self.gui.entry_var5.get():
+            result.save(output_name,
+                        encryption=fitz.PDF_ENCRYPT_AES_256,
+                        owner_pw=self.gui.entry_var5.get(),
+                        garbage=4,
+                        deflate=True)
         else:
-            a_ = math.ceil(int(len(pdf_files_))/FILE_CONST)
-            a_view = order_dict.items()
-            a_list = list(a_view)
-            st = 0
-            end = FILE_CONST
-            dct_lst = []
-            for i in range(0, a_):
-                dct_lst.append(f'a_{i}')
-                exec("a_{} = a_list[st:end]".format(i))
-                st = end
-                end += FILE_CONST
-
-
-            for elem in dct_lst:
-                dict_1 = dict()
-                exec("""for num, f_name in {0}:
-                    dict_1.setdefault(num, []).append(f_name)""".format(elem))
-                for key, value in dict_1.items():
-                    dict_1[key] = value[0]
-
-
-
-                pdf_files_ = tuple(os.path.join(dir, v) for k, v in dict(sorted(dict_1.items())).items())
-                fitz_combine(pdf_files=pdf_files_, out_name_=elem+".pdf", prot_fl_=prot_fl)
-
-            dct_lst = [elem+'.pdf' for elem in dct_lst]
-            fitz_combine(pdf_files=dct_lst, out_name_=out_name, prot_fl_=prot_fl)
-            for elem in dct_lst:
-                try:
-                    os.remove(elem)
-                except Exception as e:
-                    print(e)
-
-
+            result.save(output_name, garbage=4, deflate=True)
+        result.close()
+        return True
 
 
 class ProgressHandler(logging.Handler):
