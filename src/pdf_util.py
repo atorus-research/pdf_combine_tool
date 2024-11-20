@@ -224,54 +224,75 @@ class PDFUtility:
 
         return dict(zip(output_id, output_title))
 
-    @staticmethod
-    def close_word_proc(proc_tuple=("word", "winword", "WINWORD", "splwow64.exe"), silent=False):
+    def close_word_proc(self, proc_tuple=("word", "winword", "WINWORD", "splwow64.exe"), silent=False):
         """
-         Check if word application or print service are running and kill them to avoid freeze tool
-         :param proc_tuple: list of process to check, default values word and print service
-         :return: None
-         """
+        Check if word application or print service are running and kill them
+        """
         for proc in psutil.process_iter():
             if any(procstr in proc.name() for procstr in proc_tuple):
                 if not silent:
-                    result = messagebox.askquestion(title="Word process running",
-                                                    message='All Word related processes should be closed before run.' + \
-                                                            "\nClose all Word processes?")
-
-                if result or silent:
+                    result = messagebox.askquestion(
+                        title="Word process running",
+                        message='All Word related processes should be closed before run.\nClose all Word processes?'
+                    )
+                    if result == 'yes':
+                        proc.kill()
+                else:
+                    # In silent mode, kill process without asking
                     proc.kill()
 
     # TODO: TO_THINK: run  with multithreads, parallelization?
     def rtf_file_to_pdf(self, file_name: str, input_dir: str, output_dir: str, pause_time: float) -> None:
+        """Convert RTF to PDF with improved process handling"""
         word = None
-        wdFormatPDF = 17
-        wdDoNotSaveChanges = 0
+        max_retries = 3
+        retry_count = 0
 
-        word = win32com.client.gencache.EnsureDispatch('Word.Application')
+        while retry_count < max_retries:
+            try:
+                word = win32com.client.gencache.EnsureDispatch('Word.Application')
+                word.Visible = False
 
-        in_file = os.path.normpath(os.path.join(input_dir, file_name))
-        output_file = os.path.splitext(file_name)[0]
-        out_file = os.path.normpath(os.path.join(output_dir, output_file + '.pdf'))
+                in_file = os.path.normpath(os.path.join(input_dir, file_name))
+                output_file = os.path.splitext(file_name)[0]
+                out_file = os.path.normpath(os.path.join(output_dir, output_file + '.pdf'))
 
-        if os.path.isfile(out_file):
-            self.gui.logger.warning(f'{file_name} already exists as PDF')
-            return
+                if os.path.isfile(out_file):
+                    self.gui.logger.warning(f'{file_name} already exists as PDF')
+                    return
 
-        try:
-            doc = word.Documents.Open(in_file, False, False, True)
-            doc.SaveAs(out_file, FileFormat=wdFormatPDF)
-            doc.Close(SaveChanges=wdDoNotSaveChanges)
-            time.sleep(pause_time)
-            self.gui.logger.warning(f'{file_name} has been converted to PDF')
-        except Exception as e:
-            self.gui.logger.error(f'ERROR: Error while converting {file_name}: {str(e)}')
+                doc = word.Documents.Open(in_file, False, False, True)
+                doc.SaveAs(out_file, FileFormat=17)  # wdFormatPDF = 17
+                doc.Close(SaveChanges=0)  # wdDoNotSaveChanges = 0
+                time.sleep(pause_time)
+                self.gui.logger.warning(f'{file_name} has been converted to PDF')
+                return
+
+            except Exception as e:
+                retry_count += 1
+                self.gui.logger.warning(f'Attempt {retry_count} failed for {file_name}: {str(e)}')
+                try:
+                    if doc:
+                        doc.Close(SaveChanges=0)
+                except:
+                    pass
+
+            finally:
+                try:
+                    if word:
+                        word.Quit()
+                except:
+                    pass
+
+                # Force cleanup of any hanging processes
+                self.close_word_proc(silent=True)
+
+        if retry_count >= max_retries:
+            error_msg = f'Failed to convert {file_name} after {max_retries} attempts'
+            self.gui.logger.error(error_msg)
             if self.gui.final_run_var.get() == 1:
-                messagebox.showerror('File convert error',
-                                     f'ERROR: Error while converting {file_name}. Check metadata file and TLF file.')
+                messagebox.showerror('File convert error', error_msg)
                 os.abort()
-        finally:
-            if word:
-                word.Quit()
 
     def convert_to_pdf(self, in_list: list, rtf_folder_dir: str, pdf_folder_dir: str) -> None:
         """
