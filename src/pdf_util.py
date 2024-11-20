@@ -236,10 +236,16 @@ class PDFUtility:
                         message='All Word related processes should be closed before run.\nClose all Word processes?'
                     )
                     if result == 'yes':
-                        proc.kill()
+                        try:
+                            proc.kill()
+                        except:
+                            pass
                 else:
                     # In silent mode, kill process without asking
-                    proc.kill()
+                    try:
+                        proc.kill()
+                    except:
+                        pass
 
     # TODO: TO_THINK: run  with multithreads, parallelization?
     def rtf_file_to_pdf(self, file_name: str, input_dir: str, output_dir: str, pause_time: float) -> None:
